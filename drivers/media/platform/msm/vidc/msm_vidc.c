@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1160,6 +1160,13 @@ static inline int start_streaming(struct msm_vidc_inst *inst)
 			"Failed to decide work mode for session %pK\n", inst);
 		goto fail_start;
 	}
+	
+	if (inst->session_type == MSM_VIDC_DECODER &&
+		!inst->operating_rate_set && !is_realtime_session(inst)) {
+		inst->clk_data.turbo_mode = true;
+		dprintk(VIDC_INFO,
+			"inst(%pK) setting turbo mode ");
+	}
 
 	/* Assign Core and LP mode for current session */
 	rc = msm_vidc_decide_core_and_power_mode(inst);
@@ -1627,6 +1634,9 @@ int msm_vidc_private(void *vidc_inst, unsigned int cmd,
 		return -EINVAL;
 	}
 
+	if(cmd != VIDIOC_VIDEO_CMD)
+		return -ENOIOCTLCMD;
+
 	if (inst->session_type == MSM_VIDC_CVP) {
 		rc = msm_vidc_cvp(inst, arg);
 	} else {
@@ -1905,8 +1915,10 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->clk_data.ddr_bw = 0;
 	inst->clk_data.sys_cache_bw = 0;
 	inst->clk_data.bitrate = 0;
+	inst->operating_rate_set = false;
 	inst->clk_data.work_route = 1;
 	inst->clk_data.core_id = VIDC_CORE_ID_DEFAULT;
+	inst->clk_data.work_route = 1;
 	inst->bit_depth = MSM_VIDC_BIT_DEPTH_8;
 	inst->pic_struct = MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
 	inst->colour_space = MSM_VIDC_BT601_6_525;
